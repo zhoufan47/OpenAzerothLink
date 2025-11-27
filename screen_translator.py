@@ -5,6 +5,7 @@ import io
 import logging
 import platform
 import traceback
+import httpx  # [保留] 用于发送 HTTP 请求
 from logging.handlers import RotatingFileHandler
 
 from PyQt6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QPushButton,
@@ -16,8 +17,9 @@ from PyQt6.QtGui import (QIcon, QAction, QPixmap, QPainter, QColor, QCursor,
                          QGuiApplication)
 from PIL import Image, ImageGrab
 import pytesseract
-from openai import OpenAI
 
+
+# [移除] from openai import OpenAI (不再依赖 openai 库)
 
 # ==========================================
 # 0. 日志系统初始化
@@ -61,7 +63,8 @@ class ConfigManager:
             "model": "gpt-3.5-turbo",
             "timeout": 30,
             "region": [0, 0, 0, 0],
-            "custom_prompt": "请将以下内容翻译成中文（如果是中文则润色），直接输出结果，不要包含额外解释："
+            "custom_prompt": "请将以下内容翻译成中文（如果是中文则润色），直接输出结果，不要包含额外解释：",
+            "proxy": ""  # 代理配置
         }
         self.config = self.load_config()
 
@@ -95,7 +98,7 @@ class ConfigManager:
 
 
 # ==========================================
-# 2. 后台工作线程
+# 2. 后台工作线程 (使用 httpx 原生请求)
 # ==========================================
 class TranslationWorker(QThread):
     finished = pyqtSignal(str)
@@ -133,34 +136,97 @@ class TranslationWorker(QThread):
 
             logging.info(f"OCR 成功，字符数: {len(text)}")
 
-            api_base = self.config.get("api_base")
-            api_key = self.config.get("api_key")
+            api_base = self.config.get("api_base").strip()
+            api_key = self.config.get("api_key").strip()
+            proxy_url = self.config.get("proxy").strip()
 
             if not api_key:
                 self.error.emit("错误: 未配置 API Key")
                 return
 
-            client = OpenAI(base_url=api_base, api_key=api_key)
+            # --- [核心修改] 构建原生 HTTP 请求 ---
+
+            # 1. 准备代理参数
+            proxies_arg = None
+            if proxy_url and proxy_url.strip():
+                p_url = proxy_url.strip()
+                if not p_url.startswith("http"):
+                    p_url = f"http://{p_url}"
+                proxies_arg = p_url
+                logging.info(f"配置代理: {p_url}")
+                # 环境变量兜底
+                os.environ["HTTP_PROXY"] = p_url
+                os.environ["HTTPS_PROXY"] = p_url
+
+            # 2. 拼接 URL 和 Headers
+            # 兼容处理：如果 base 已经包含了 /chat/completions 则不拼接，否则自动拼接
+            if api_base.endswith("/chat/completions"):
+                target_url = api_base
+            else:
+                target_url = f"{api_base.rstrip('/')}/chat/completions"
+
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+                # OpenRouter 需要的额外 Headers
+                "HTTP-Referer": "https://github.com/ai-screen-translator",
+                "X-Title": "AI Screen Translator"
+            }
+
+            # 3. 构建 Payload
             custom_prompt = self.config.get("custom_prompt")
             full_content = f"{custom_prompt}\n\n{text}"
 
-            logging.info("发送 LLM 请求...")
-            response = client.chat.completions.create(
-                model=self.config.get("model"),
-                messages=[{"role": "user", "content": full_content}],
-                timeout=self.config.get("timeout")
-            )
+            payload = {
+                "model": self.config.get("model"),
+                "messages": [{"role": "user", "content": full_content}],
+                "stream": False
+            }
 
-            result = response.choices[0].message.content
-            self.finished.emit(result)
+            timeout_val = self.config.get("timeout")
+            logging.info(f"发送 POST 请求至: {target_url}")
+
+            # 4. 发送请求 (兼容 httpx 版本差异)
+            response = None
+            try:
+                # 尝试新版参数名 proxy
+                with httpx.Client(proxy=proxies_arg, timeout=timeout_val) as client:
+                    response = client.post(target_url, headers=headers, json=payload)
+            except TypeError:
+                logging.info("httpx 不支持 proxy 参数，尝试使用 proxies")
+                # 回退旧版参数名 proxies
+                with httpx.Client(proxies=proxies_arg, timeout=timeout_val) as client:
+                    response = client.post(target_url, headers=headers, json=payload)
+            except Exception as e:
+                raise Exception(f"网络连接失败: {str(e)}")
+
+            # 5. 检查状态码
+            if response.status_code != 200:
+                logging.error(f"API Error: {response.status_code} - {response.text}")
+                try:
+                    err_json = response.json()
+                    err_msg = err_json.get('error', {}).get('message', response.text)
+                except:
+                    err_msg = response.text
+                raise Exception(f"API 返回错误 ({response.status_code}): {err_msg}")
+
+            # 6. 解析结果
+            try:
+                result_json = response.json()
+                logging.info(f"API 响应: {result_json}")
+                result = result_json['choices'][0]['message']['content']
+                self.finished.emit(result)
+            except (KeyError, IndexError, json.JSONDecodeError) as e:
+                logging.error(f"解析响应失败: {response.text}", exc_info=True)
+                raise Exception(f"无法解析 API 响应: {str(e)}")
 
         except Exception as e:
-            logging.error("Worker 未知异常", exc_info=True)
+            logging.error("Worker 异常", exc_info=True)
             self.error.emit(f"错误: {str(e)}")
 
 
 # ==========================================
-# 3. 屏幕区域选择工具
+# 3. [修复版] 屏幕区域选择工具 (支持多屏/Win11)
 # ==========================================
 class RegionSelector(QWidget):
     region_selected = pyqtSignal(QRect)
@@ -178,6 +244,8 @@ class RegionSelector(QWidget):
         self.start_point = None
         self.end_point = None
 
+        # [Win11 修复关键] 获取所有屏幕的组合几何形状
+        # 这确保了无论你在主屏还是副屏，遮罩都能覆盖
         total_rect = QRect()
         for screen in QApplication.screens():
             total_rect = total_rect.united(screen.geometry())
@@ -264,6 +332,10 @@ class SettingsDialog(QDialog):
         self.timeout_input = QSpinBox()
         self.timeout_input.setValue(self.config.get("timeout"))
 
+        # [新增] 代理输入框
+        self.proxy_input = QLineEdit(self.config.get("proxy"))
+        self.proxy_input.setPlaceholderText("例如: http://127.0.0.1:7890 (留空则不使用)")
+
         self.prompt_input = QTextEdit()
         self.prompt_input.setPlainText(self.config.get("custom_prompt"))
         self.prompt_input.setPlaceholderText("例如：请翻译...")
@@ -273,6 +345,7 @@ class SettingsDialog(QDialog):
         layout.addRow("API Key:", self.key_input)
         layout.addRow("Model Name:", self.model_input)
         layout.addRow("超时(秒):", self.timeout_input)
+        layout.addRow("代理地址 (Proxy):", self.proxy_input)  # [新增]
         layout.addRow("Prompt:", self.prompt_input)
 
         save_btn = QPushButton("保存")
@@ -285,6 +358,7 @@ class SettingsDialog(QDialog):
         self.config.set("api_key", self.key_input.text())
         self.config.set("model", self.model_input.text())
         self.config.set("timeout", self.timeout_input.value())
+        self.config.set("proxy", self.proxy_input.text())  # [新增]
         self.config.set("custom_prompt", self.prompt_input.toPlainText())
         self.accept()
 
