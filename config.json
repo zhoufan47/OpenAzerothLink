@@ -1,0 +1,13 @@
+{
+    "api_base": "https://api.openai.com/v1",
+    "api_key": "",
+    "model": "gpt-3.5-turbo",
+    "timeout": 30,
+    "region": [
+        1,
+        4,
+        139,
+        50
+    ],
+    "custom_prompt": "123"
+}
