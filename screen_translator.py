@@ -146,8 +146,10 @@ class ConfigManager:
                     loaded = json.load(f)
                     config = self.default_config.copy()
                     config.update(loaded)
+                    logging.info("配置加载成功")
                     return config
-            except Exception:
+            except Exception as e:
+                logging.error(f"加载配置文件失败: {e}")
                 return self.default_config
         return self.default_config
 
@@ -242,8 +244,14 @@ class TranslationWorker(QThread):
 
     def run(self):
         try:
-            pil_bytes = io.BytesIO(self.image_data)
-            image = Image.open(pil_bytes)
+            logging.info("Worker: 开始处理任务")
+            try:
+                pil_bytes = io.BytesIO(self.image_data)
+                image = Image.open(pil_bytes)
+            except Exception as e:
+                logging.error("PIL 读取图像失败", exc_info=True)
+                self.error.emit("Image Data C")
+                return
 
             try:
                 text = pytesseract.image_to_string(image, lang='chi_sim+eng')
@@ -257,9 +265,11 @@ class TranslationWorker(QThread):
                 self.error.emit(self.config.tr("msg_ocr_empty"))
                 return
 
+            logging.info(f"OCR 成功，字符数: {len(text)}")
+            logging.info(f"内容:{text}")
             api_base = self.config.get("api_base").strip()
             api_key = self.config.get("api_key").strip()
-            proxy_url = self.config.get("proxy")
+            proxy_url = self.config.get("proxy").strip()
 
             if not api_key:
                 self.error.emit(self.config.tr("msg_api_key_missing"))
@@ -270,6 +280,7 @@ class TranslationWorker(QThread):
             if proxy_url and proxy_url.strip():
                 p_url = proxy_url.strip()
                 if not p_url.startswith("http"): p_url = f"http://{p_url}"
+                logging.info(f"配置代理: {p_url}")
                 proxies_arg = p_url
 
             if api_base.endswith("/chat/completions"):
@@ -294,6 +305,7 @@ class TranslationWorker(QThread):
             }
 
             try:
+                logging.info(f"发送 POST 请求至: {target_url}")
                 timeout_val = self.config.get("timeout")
                 try:
                     client = httpx.Client(proxy=proxies_arg, timeout=timeout_val)
@@ -311,6 +323,7 @@ class TranslationWorker(QThread):
 
             try:
                 result_json = response.json()
+                logging.info(f"API 响应: {result_json}")
                 content = result_json['choices'][0]['message']['content']
                 # 提取 Usage 信息
                 usage = result_json.get("usage", {"prompt_tokens": 0, "completion_tokens": 0})
@@ -344,6 +357,8 @@ class RegionSelector(QWidget):
         total_rect = QRect()
         for screen in QApplication.screens():
             total_rect = total_rect.united(screen.geometry())
+
+        logging.info(f"RegionSelector 覆盖区域: {total_rect}")
         self.setGeometry(total_rect)
 
     def paintEvent(self, event):
@@ -364,13 +379,20 @@ class RegionSelector(QWidget):
         self.update()
 
     def mouseReleaseEvent(self, event):
+        # 计算相对于桌面的绝对坐标
         rect = QRect(self.start_point, event.pos()).normalized()
+        # 将窗口内的局部坐标转换为屏幕的全局坐标
         global_top_left = self.mapToGlobal(rect.topLeft())
         global_rect = QRect(global_top_left, rect.size())
+
+        logging.info(f"选中区域(全局): {global_rect}")
         self.region_selected.emit(global_rect)
         self.close()
 
 
+# ==========================================
+# 4. 高亮提示框
+# ==========================================
 class RegionHighlighter(QWidget):
     def __init__(self):
         super().__init__()
@@ -398,6 +420,9 @@ class RegionHighlighter(QWidget):
         painter.drawRect(rect.adjusted(2, 2, -2, -2))
 
 
+# ==========================================
+# 5. 设置窗口
+# ==========================================
 class SettingsDialog(QDialog):
     def __init__(self, config_manager, main_app):
         super().__init__()
@@ -728,6 +753,7 @@ class MainApplication:
         x, y, w, h = region
         image_bytes = None
         current_os = platform.system()
+        logging.info(f"系统: {current_os}, 区域: {region}")
 
         try:
             if current_os == "Windows":
