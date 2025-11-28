@@ -5,7 +5,7 @@ bundle = "org.bbt"
 version = "0.0.1"
 url = "https://bangzonghao.top/openzerothlink"
 license.file = "LICENSE"
-author = "zhoufan"
+author = "棒棒糖"
 author_email = "zhoufan47@hotmail.com"
 
 [tool.briefcase.app.openazerothlink]
