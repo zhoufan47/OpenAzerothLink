@@ -6,13 +6,14 @@ import logging
 import platform
 import traceback
 import httpx
+import base64
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
 
 from PyQt6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
                              QLabel, QSystemTrayIcon, QMenu, QDialog, QLineEdit,
                              QFormLayout, QSpinBox, QTextEdit, QMessageBox, QComboBox,
-                             QFrame, QSizePolicy)
+                             QFrame, QSizePolicy, QCheckBox)
 from PyQt6.QtCore import (Qt, QThread, pyqtSignal, QRect, QPoint, QSize,
                           QBuffer, QByteArray, QIODevice)
 from PyQt6.QtGui import (QIcon, QAction, QPixmap, QPainter, QColor, QCursor,
@@ -73,6 +74,8 @@ I18N = {
         "lbl_proxy": "代理地址 (Proxy):",
         "lbl_lang": "语言 (Language):",
         "lbl_prompt": "Prompt:",
+        "chk_advanced_mode": "高级模式 (跳过OCR，直接发送图片)",
+        "tip_advanced_mode": "⚠️ 注意：高级模式需要模型支持视觉识别 (Vision)，且消耗更多 Token。",
         "btn_save": "保存",
         "stats_title": "Token 消耗统计",
         "stats_session": "本次运行消耗:",
@@ -106,6 +109,8 @@ I18N = {
         "lbl_proxy": "Proxy:",
         "lbl_lang": "Language:",
         "lbl_prompt": "Prompt:",
+        "chk_advanced_mode": "Advanced Mode (Send image directly)",
+        "tip_advanced_mode": "⚠️ Note: Requires Vision-capable model. Consumes more tokens.",
         "btn_save": "Save",
         "stats_title": "Token Statistics",
         "stats_session": "Current Session:",
@@ -135,7 +140,8 @@ class ConfigManager:
             "custom_prompt": "请将以下内容翻译成中文（如果是中文则润色），直接输出结果，不要包含额外解释：",
             "proxy": "",
             "language": "zh_CN",  # zh_CN or en_US
-            "overlay_pos": None  # [新增] [x, y]
+            "overlay_pos": None,  # [新增] [x, y]
+            "advanced_mode": False  # [新增] 高级模式开关
         }
         self.config = self.load_config()
 
@@ -160,8 +166,11 @@ class ConfigManager:
         except Exception as e:
             logging.error(f"保存配置失败: {e}")
 
-    def get(self, key):
-        return self.config.get(key, self.default_config.get(key))
+    def get(self, key, default=None):
+        val = self.config.get(key)
+        if val is None:
+            return default if default is not None else self.default_config.get(key)
+        return val
 
     def set(self, key, value):
         self.config[key] = value
@@ -244,29 +253,66 @@ class TranslationWorker(QThread):
 
     def run(self):
         try:
+            # 1. 预处理图像
             logging.info("Worker: 开始处理任务")
             try:
                 pil_bytes = io.BytesIO(self.image_data)
                 image = Image.open(pil_bytes)
             except Exception as e:
-                logging.error("PIL 读取图像失败", exc_info=True)
-                self.error.emit("Image Data C")
+                logging.error(f"PIL 读取图像失败,{str(e)}", exc_info=True)
+                self.error.emit("Image Data Error")
                 return
 
-            try:
-                text = pytesseract.image_to_string(image, lang='chi_sim+eng')
-            except Exception as e:
-                logging.error(f"OCR Error: {str(e)}")
-                self.error.emit(f"OCR Error: {str(e)}")
-                return
+            # 2. 检查模式
+            is_advanced = self.config.get("advanced_mode", False)
+            messages = []
 
-            text = text.strip()
-            if not text:
-                self.error.emit(self.config.tr("msg_ocr_empty"))
-                return
+            if is_advanced:
+                logging.info("使用高级模式 (Vision)")
+                # 高级模式：转换为 JPG -> Base64 -> Vision Payload
+                if image.mode in ("RGBA", "P"):
+                    image = image.convert("RGB")
 
-            logging.info(f"OCR 成功，字符数: {len(text)}")
-            logging.info(f"内容:{text}")
+                jpg_buffer = io.BytesIO()
+                # 质量设置为 85
+                image.save(jpg_buffer, format='JPEG', quality=85)
+                jpg_base64 = base64.b64encode(jpg_buffer.getvalue()).decode('utf-8')
+
+                # 构造符合 OpenAI Vision 格式的消息
+                messages = [
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": self.config.get("custom_prompt")},
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/jpeg;base64,{jpg_base64}"
+                                }
+                            }
+                        ]
+                    }
+                ]
+            else:
+                logging.info("使用普通模式 (OCR)")
+                # 普通模式：本地 OCR -> 纯文本
+                try:
+                    text = pytesseract.image_to_string(image, lang='chi_sim+eng')
+                except Exception as e:
+                    self.error.emit(f"OCR Error: {str(e)}")
+                    return
+
+                text = text.strip()
+                logging.info(f"OCR 成功，字符数: {len(text)}")
+                logging.info(f"内容:{text}")
+                if not text:
+                    self.error.emit(self.config.tr("msg_ocr_empty"))
+                    return
+
+                full_content = f"{self.config.get('custom_prompt')}\n\n{text}"
+                messages = [{"role": "user", "content": full_content}]
+
+            # 3. 发送请求
             api_base = self.config.get("api_base").strip()
             api_key = self.config.get("api_key").strip()
             proxy_url = self.config.get("proxy").strip()
@@ -275,7 +321,7 @@ class TranslationWorker(QThread):
                 self.error.emit(self.config.tr("msg_api_key_missing"))
                 return
 
-            # 构建 HTTP 请求
+            # 构建 HTTP 请求配置
             proxies_arg = None
             if proxy_url and proxy_url.strip():
                 p_url = proxy_url.strip()
@@ -295,12 +341,9 @@ class TranslationWorker(QThread):
                 "X-Title": "AI Screen Translator"
             }
 
-            custom_prompt = self.config.get("custom_prompt")
-            full_content = f"{custom_prompt}\n\n{text}"
-
             payload = {
                 "model": self.config.get("model"),
-                "messages": [{"role": "user", "content": full_content}],
+                "messages": messages,
                 "stream": False
             }
 
@@ -315,7 +358,7 @@ class TranslationWorker(QThread):
                 with client:
                     response = client.post(target_url, headers=headers, json=payload)
             except Exception as e:
-                logging.error("HTTP Error", exc_info=True)
+                logging.error(f"HTTP Error {str(e)}", exc_info=True)
                 raise Exception(f"{self.config.tr('msg_net_error')}: {str(e)}")
 
             if response.status_code != 200:
@@ -429,7 +472,7 @@ class SettingsDialog(QDialog):
         self.config = config_manager
         self.main_app = main_app
         self.setWindowTitle(self.config.tr("settings_title"))
-        self.resize(400, 550)
+        self.resize(400, 600)
         self.init_ui()
 
     def init_ui(self):
@@ -454,6 +497,11 @@ class SettingsDialog(QDialog):
         self.proxy_input = QLineEdit(self.config.get("proxy"))
         self.proxy_input.setPlaceholderText(self.config.tr("proxy_placeholder"))
 
+        # [新增] 高级模式开关
+        self.advanced_mode_chk = QCheckBox(self.config.tr("chk_advanced_mode"))
+        self.advanced_mode_chk.setChecked(self.config.get("advanced_mode", False))
+        self.advanced_mode_chk.setToolTip(self.config.tr("tip_advanced_mode"))
+
         self.prompt_input = QTextEdit()
         self.prompt_input.setPlainText(self.config.get("custom_prompt"))
         self.prompt_input.setPlaceholderText(self.config.tr("prompt_placeholder"))
@@ -465,6 +513,7 @@ class SettingsDialog(QDialog):
         layout.addRow(self.config.tr("lbl_model"), self.model_input)
         layout.addRow(self.config.tr("lbl_timeout"), self.timeout_input)
         layout.addRow(self.config.tr("lbl_proxy"), self.proxy_input)
+        layout.addRow("", self.advanced_mode_chk)  # 添加复选框
         layout.addRow(self.config.tr("lbl_prompt"), self.prompt_input)
 
         save_btn = QPushButton(self.config.tr("btn_save"))
@@ -482,6 +531,7 @@ class SettingsDialog(QDialog):
         self.config.set("model", self.model_input.text())
         self.config.set("timeout", self.timeout_input.value())
         self.config.set("proxy", self.proxy_input.text())
+        self.config.set("advanced_mode", self.advanced_mode_chk.isChecked())  # 保存高级模式状态
         self.config.set("custom_prompt", self.prompt_input.toPlainText())
 
         if old_lang != new_lang:
@@ -660,15 +710,37 @@ class FloatingButton(QWidget):
             QPushButton:pressed { background-color: #3e8e41; }
         """)
         self.btn.clicked.connect(self.main_app.trigger_translation)
+
+        # [新增] 右键菜单支持
+        self.btn.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.btn.customContextMenuRequested.connect(self.on_context_menu_requested)
+
         self.old_pos = None
 
     def showEvent(self, event):
         self.raise_()
         super().showEvent(event)
 
+    def on_context_menu_requested(self, point):
+        # 按钮上的点击，需要映射到全局坐标
+        global_pos = self.btn.mapToGlobal(point)
+        self.show_menu(global_pos)
+
+    def show_menu(self, global_pos):
+        menu = QMenu(self)
+        menu.addAction(self.main_app.config.tr("tray_region"), self.main_app.start_selection)
+        menu.addAction(self.main_app.config.tr("tray_settings"), self.main_app.open_settings)
+        menu.addAction(self.main_app.config.tr("tray_stats"), self.main_app.open_stats)
+        menu.addSeparator()
+        menu.addAction(self.main_app.config.tr("tray_exit"), self.main_app.quit_app)
+        menu.exec(global_pos)
+
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.old_pos = event.globalPosition().toPoint()
+        elif event.button() == Qt.MouseButton.RightButton:
+            # 边缘点击，直接使用事件的 globalPosition
+            self.show_menu(event.globalPosition().toPoint())
 
     def mouseMoveEvent(self, event):
         if self.old_pos:
@@ -701,7 +773,7 @@ class MainApplication:
 
     def init_tray(self):
         self.tray_icon = QSystemTrayIcon(self.app)
-        icon_path = "../tray.icon"
+        icon_path = "./tray.icon"
         if os.path.exists(icon_path):
             self.tray_icon.setIcon(QIcon(icon_path))
         else:
