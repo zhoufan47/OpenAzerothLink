@@ -26,7 +26,7 @@ AI 驱动：支持接入 OpenAI (GPT-3.5/4) 或任何兼容 OpenAI 接口的模�
 
 1.安装 OCR 引擎 (Tesseract) ⚠️ 必须步骤
     
-    1.下载安装包：https://github.com/tesseract-ocr/tesseract/releases
+    1.下载安装包：https://github.com/tesseract-ocr/tesseract/releases/download/5.5.0/tesseract-ocr-w64-setup-5.5.0.20241111.exe
     2.安装时请勾选 Chinese (Simplified) 语言包。
     3.确保将 Tesseract 的安装路径添加到系统的 PATH 环境变量中。
 
@@ -65,7 +65,7 @@ System Tray: Supports minimizing to the system tray; right-click the menu to acc
 ### 🛠️ Installation Guide
 1.Install OCR Engine (Tesseract) ⚠️ Mandatory
     
-    https://github.com/tesseract-ocr/tesseract/releases
+    https://github.com/tesseract-ocr/tesseract/releases/download/5.5.0/tesseract-ocr-w64-setup-5.5.0.20241111.exe
     1.This tool relies on Tesseract for text recognition. 
     2.Make sure to select Chinese (Simplified) and other relevant languages during installation.
     3.Add Tesseract installation path to your system's PATH environment variable.
