@@ -248,6 +248,7 @@ class TranslationWorker(QThread):
             try:
                 text = pytesseract.image_to_string(image, lang='chi_sim+eng')
             except Exception as e:
+                logging.error(f"OCR Error: {str(e)}")
                 self.error.emit(f"OCR Error: {str(e)}")
                 return
 
@@ -302,6 +303,7 @@ class TranslationWorker(QThread):
                 with client:
                     response = client.post(target_url, headers=headers, json=payload)
             except Exception as e:
+                logging.error("HTTP Error", exc_info=True)
                 raise Exception(f"{self.config.tr('msg_net_error')}: {str(e)}")
 
             if response.status_code != 200:
@@ -314,6 +316,7 @@ class TranslationWorker(QThread):
                 usage = result_json.get("usage", {"prompt_tokens": 0, "completion_tokens": 0})
                 self.finished.emit(content, usage)
             except Exception as e:
+                logging.error("Parse Error", exc_info=True)
                 raise Exception(f"Parse Error: {str(e)}")
 
         except Exception as e:
