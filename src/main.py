@@ -29,7 +29,7 @@ def setup_logging():
     logger.setLevel(logging.INFO)
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s')
 
-    file_handler = RotatingFileHandler('app.log', maxBytes=1024 * 1024, backupCount=3, encoding='utf-8')
+    file_handler = RotatingFileHandler('../app.log', maxBytes=1024 * 1024, backupCount=3, encoding='utf-8')
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
 
@@ -701,7 +701,7 @@ class MainApplication:
 
     def init_tray(self):
         self.tray_icon = QSystemTrayIcon(self.app)
-        icon_path = "tray.icon"
+        icon_path = "../tray.icon"
         if os.path.exists(icon_path):
             self.tray_icon.setIcon(QIcon(icon_path))
         else:
