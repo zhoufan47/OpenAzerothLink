@@ -1,0 +1,1 @@
+nuitka --windows-icon-from-ico=./exe.ico --standalone --plugin-enable=pyqt6 --windows-console-mode=disable --include-data-file=tray.icon=tray.icon  .\src\main.py
