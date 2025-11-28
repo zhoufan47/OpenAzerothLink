@@ -25,7 +25,9 @@ AI 驱动：支持接入 OpenAI (GPT-3.5/4) 或任何兼容 OpenAI 接口的模�
 ### 🛠️ 安装指南
 
 1.安装 OCR 引擎 (Tesseract) ⚠️ 必须步骤
-    
+
+    V0.2.0+版本支持图片直通模式，直接向LLM 发送图片，不需要OCR引擎。此模式下LLM的图片解析效果更好，但是会消耗更多的TOKEN
+
     1.下载安装包：https://github.com/tesseract-ocr/tesseract/releases/download/5.5.0/tesseract-ocr-w64-setup-5.5.0.20241111.exe
     2.安装时请勾选 Chinese (Simplified) 语言包。
     3.确保将 Tesseract 的安装路径添加到系统的 PATH 环境变量中。
@@ -64,6 +66,9 @@ System Tray: Supports minimizing to the system tray; right-click the menu to acc
 
 ### 🛠️ Installation Guide
 1.Install OCR Engine (Tesseract) ⚠️ Mandatory
+
+     V0.2.0+ Version is now support image passthrough mode (Advacned mode).In this mode,software will send image to LLM directly.Do not need OCR Engine anymore.
+     This may make the result much more accurate,but it will cost more TOKEN.
     
     https://github.com/tesseract-ocr/tesseract/releases/download/5.5.0/tesseract-ocr-w64-setup-5.5.0.20241111.exe
     1.This tool relies on Tesseract for text recognition. 
