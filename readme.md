@@ -4,7 +4,7 @@
 
 Open Azeroth Link 是一款基于 Python 开发的桌面屏幕翻译工具。它允许用户选择屏幕上的任意区域，通过 OCR（光学字符识别）提取文字，并调用 OpenAI 兼容的 LLM（大语言模型）进行翻译、润色或解释。
 
-项目旨在提供一个轻量级、针对《魔兽世界》的屏幕翻译工具，支持 Windows 和 macOS 系统。
+项目旨在提供一个轻量级、针对《魔兽世界》的屏幕翻译工具，支持 Windows。
 
 ### ✨ 主要特性
 
@@ -20,15 +20,21 @@ AI 驱动：支持接入 OpenAI (GPT-3.5/4) 或任何兼容 OpenAI 接口的模�
 
 视觉反馈：识别过程中，目标区域会高亮显示，提供清晰的交互体验。
 
-跨平台支持：同时支持 Windows 和 macOS 系统，macOS下未经过严格测试，可能存在崩溃风险。
-
 系统托盘：支持最小化至托盘，右键菜单进行设置或退出。
 
 ### 🛠️ 安装指南
 
-1.从Release 中下载最新压缩包，解压后运行OpenAzerothLink.exe
-2.从系统托盘中寻找图标，右键设置相关参数
-3.点击“译”按钮，对监控区域进行翻译，翻译完成后，将有浮窗展示翻译后内容
+1.安装 OCR 引擎 (Tesseract) ⚠️ 必须步骤
+    
+    1.下载安装包：https://github.com/tesseract-ocr/tesseract/releases
+    2.安装时请勾选 Chinese (Simplified) 语言包。
+    3.确保将 Tesseract 的安装路径添加到系统的 PATH 环境变量中。
+
+2.从Release 中下载最新压缩包，解压后运行OpenAzerothLink.exe
+
+3.从系统托盘中寻找图标，右键设置相关参数
+
+4.点击“译”按钮，对监控区域进行翻译，翻译完成后，将有浮窗展示翻译后内容
 
 ### 📜 开源协议
 
@@ -54,17 +60,21 @@ Result Popup: Translation results float directly near the mouse cursor and can b
 
 Visual Feedback: During the recognition process, the target area is highlighted to provide a clear interactive experience.
 
-Cross-Platform Support: Supports both Windows and macOS systems. (Note: macOS support has not undergone strict testing and may carry a risk of crashing.)
-
 System Tray: Supports minimizing to the system tray; right-click the menu to access settings or exit.
 
 ### 🛠️ Installation Guide
+1.Install OCR Engine (Tesseract) ⚠️ Mandatory
+    
+    https://github.com/tesseract-ocr/tesseract/releases
+    1.This tool relies on Tesseract for text recognition. 
+    2.Make sure to select Chinese (Simplified) and other relevant languages during installation.
+    3.Add Tesseract installation path to your system's PATH environment variable.
 
-Download the latest archive from Releases, unzip it, and run OpenAzerothLink.exe.
+2.Download the latest archive from Releases, unzip it, and run OpenAzerothLink.exe.
 
-Locate the icon in the system tray and right-click to configure the relevant parameters.
+3.Locate the icon in the system tray and right-click to configure the relevant parameters.
 
-Click the "Translate" (译) button to translate the monitored area. Once complete, a floating window will display the translated content.
+4.Click the "译" (Translate) button to translate the monitored area. Once complete, a floating window will display the translated content.
 
 ### 📜 License
 
