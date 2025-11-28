@@ -1,0 +1,124 @@
+# This project was generated with 0.3.25 using template: https://github.com/beeware/briefcase-template @ v0.3.25
+[tool.briefcase]
+project_name = "OpenAzerothLink"
+bundle = "org.bbt"
+version = "0.0.1"
+url = "https://bangzonghao.top/openzerothlink"
+license.file = "LICENSE"
+author = "zhoufan"
+author_email = "zhoufan47@hotmail.com"
+
+[tool.briefcase.app.openazerothlink]
+formal_name = "OpenAzerothLink"
+description = "LLM translate form WoW"
+long_description = """More details about the app should go here.
+"""
+sources = [
+    "src/openazerothlink",
+]
+test_sources = [
+    "tests",
+]
+
+requires = [
+    "PySide6-Essentials~=6.8",
+    # "PySide6-Addons~=6.8",
+]
+test_requires = [
+    "pytest",
+]
+
+[tool.briefcase.app.openazerothlink.macOS]
+universal_build = true
+# As of Pyside 6.8, PySide enforces a macOS 12 minimum on wheels.
+min_os_version = "12.0"
+requires = [
+    "std-nslog~=1.0.3",
+]
+
+[tool.briefcase.app.openazerothlink.linux]
+requires = [
+]
+
+[tool.briefcase.app.openazerothlink.linux.system.debian]
+system_requires = [
+]
+
+system_runtime_requires = [
+    # Derived from https://doc.qt.io/qt-6/linux-requirements.html
+    "libxext6",
+    "libxrender1",
+    "libx11-xcb1",
+    "libxkbcommon-x11-0",
+    "libxcb-image0",
+    "libxcb-cursor0",
+    "libxcb-shape0",
+    "libxcb-randr0",
+    "libxcb-xfixes0",
+    "libxcb-sync1",
+    "libxcb-icccm4",
+    "libxcb-keysyms1",
+    "libfontconfig1",
+    "libsm6",
+    "libice6",
+    "libglib2.0-0",
+    "libgl1",
+    "libegl1",
+    "libdbus-1-3",
+]
+
+[tool.briefcase.app.openazerothlink.linux.system.rhel]
+system_requires = [
+]
+
+system_runtime_requires = [
+    "qt6-qtbase-gui",
+]
+
+[tool.briefcase.app.openazerothlink.linux.system.suse]
+system_requires = [
+]
+
+system_runtime_requires = [
+    "libgthread-2_0-0",
+    "libQt6Gui6",
+]
+
+[tool.briefcase.app.openazerothlink.linux.system.arch]
+system_requires = [
+]
+
+system_runtime_requires = [
+    "qt6-base",
+]
+
+[tool.briefcase.app.openazerothlink.linux.appimage]
+manylinux = "manylinux_2_28"
+
+system_requires = [
+# ?? FIXME
+]
+
+linuxdeploy_plugins = [
+]
+
+[tool.briefcase.app.openazerothlink.linux.flatpak]
+flatpak_runtime = "org.kde.Platform"
+flatpak_runtime_version = "6.9"
+flatpak_sdk = "org.kde.Sdk"
+
+[tool.briefcase.app.openazerothlink.windows]
+requires = [
+]
+
+# Mobile deployments
+[tool.briefcase.app.openazerothlink.iOS]
+supported = false
+
+[tool.briefcase.app.openazerothlink.android]
+supported = false
+
+# Web deployments
+[tool.briefcase.app.openazerothlink.web]
+supported = false
+
