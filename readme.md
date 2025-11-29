@@ -84,3 +84,7 @@ System Tray: Supports minimizing to the system tray; right-click the menu to acc
 ### 📜 License
 
 This project is licensed under the GNU General Public License v3.0 (GPLv3).
+
+====
+
+Any problem ? Just e-mail me(zhoufan47@hotmail.com) or post a issue.
