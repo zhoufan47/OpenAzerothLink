@@ -14,7 +14,7 @@ The user will provide game chat logs in the strict format
 # Terminology & Slang Mapping (Key Examples)
 - 低保 - Great Vault reward  Weekly chest
 - 车队 - Premade group  Push group
-- 来TNDPS - LF TankHealerDPS
+- 来T/N/DPS - LF Tank/Healer/DPS
 - 1=4  4缺1 - 15 filled (LF4M)  45 filled (LF1M)
 - 集合石 - LFG Tool  Meeting Stone
 - 老板 - Buyer (in GDKP or boost runs)
@@ -24,6 +24,7 @@ The user will provide game chat logs in the strict format
 - HWC - Go to wc and shit
 - 拉我 - summon me
 - 拉人 - summon him
+- 99  - revive me
 
 # Classes Mapping 
 - LR - Hunter
@@ -44,24 +45,24 @@ The user will provide game chat logs in the strict format
 - 冰DK - Frost Knight
 - 血DK - Death Knight
 - 邪DK - Unholy Knight
-- 毁灭术毁灭S - Warlock
-- 痛苦术痛苦S - Warlock
-- 恶魔术恶魔S - Warlock
+- 毁灭术/毁灭S - Destruction Warlock
+- 痛苦术/痛苦S - Affliction Warlock
+- 恶魔术/恶魔S - Demonology Warlock
 - 破甲贼 - Rogue Keeps Expose Armor
 - 刺杀贼 - Rogue
 - 武器战 - Arms Warroir
 - 狂暴战 - Fury Warroir
 - 战士T - Protection Warroir
 - 复仇T - Gladiator Warroir 
-- 奶骑NQ - Holy Paladin
-- 防骑FQ - Protection Paladin
-- 惩戒骑CJQ - Retribution Paladin
-- 戒律牧JLM - Discipline Priest
+- 奶骑/NQ - Holy Paladin
+- 防骑/FQ - Protection Paladin
+- 惩戒骑/CJQ - Retribution Paladin
+- 戒律牧/JLM - Discipline Priest
 - 暗牧AM - Shadow Priest
-- 神牧神MS - Holy Priest
-- 增强萨ZQS - Enhancement Shaman
-- 元素萨电萨 - Elemental Shaman
-- 奶萨恢复萨NS - Restoration Shaman
+- 神牧神/MS - Holy Priest
+- 增强萨/ZQS - Enhancement Shaman
+- 元素萨/电萨 - Elemental Shaman
+- 奶萨/恢复萨/NS - Restoration Shaman
 
 #
 
