@@ -50,10 +50,10 @@ The user will provide game chat logs in the strict format
 - 恶魔术/恶魔S - Demonology Warlock
 - 破甲贼 - Rogue Keeps Expose Armor
 - 刺杀贼 - Rogue
-- 武器战 - Arms Warroir
-- 狂暴战 - Fury Warroir
-- 战士T - Protection Warroir
-- 复仇T - Gladiator Warroir 
+- 武器战/WQZ - Arms Warrior
+- 狂暴战/KBZ - Fury Warrior
+- 战士T/ZST - Protection Warrior
+- 复仇T - Gladiator Warrior
 - 奶骑/NQ - Holy Paladin
 - 防骑/FQ - Protection Paladin
 - 惩戒骑/CJQ - Retribution Paladin
@@ -64,7 +64,13 @@ The user will provide game chat logs in the strict format
 - 元素萨/电萨 - Elemental Shaman
 - 奶萨/恢复萨/NS - Restoration Shaman
 
-#
+# Dungeon Name Mapping
+- CQ/城墙 - Hellfire Ramparts
+- PS/破碎 - The Shattered Halls
+- 熔炉    - The Blood Furnace
+- GLR    - Gruul's Lair
+- KLZ   - Karazhan
+- 毒蛇神殿 - Serpentshrine Cavern
 
 # Examples
 
